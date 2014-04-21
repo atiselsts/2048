@@ -3,6 +3,9 @@ function HTMLActuator() {
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
   this.messageContainer = document.querySelector(".game-message");
+  this.currentValueContainer = document.querySelector(".current-value-container");
+  this.bestValueContainer = document.querySelector(".best-value-container");
+  this.autoplayContainer = document.querySelector(".autoplay-button");
 
   this.score = 0;
 }
@@ -23,6 +26,9 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
 
     self.updateScore(metadata.score);
     self.updateBestScore(metadata.bestScore);
+    self.updateCurrentValue(metadata.currentValue);
+    self.updateBestValue(metadata.bestValue);
+    self.updateAutoplayState(metadata.autoplay);
 
     if (metadata.terminated) {
       if (metadata.over) {
@@ -122,6 +128,18 @@ HTMLActuator.prototype.updateScore = function (score) {
 
 HTMLActuator.prototype.updateBestScore = function (bestScore) {
   this.bestContainer.textContent = bestScore;
+};
+
+HTMLActuator.prototype.updateCurrentValue = function (currentValue) {
+  this.currentValueContainer.textContent = currentValue;
+};
+
+HTMLActuator.prototype.updateBestValue = function (bestValue) {
+  this.bestValueContainer.textContent = bestValue;
+};
+
+HTMLActuator.prototype.updateAutoplayState = function (isAutoplay) {
+  this.autoplayContainer.textContent = isAutoplay ? "Stop auto play" : "Auto play";
 };
 
 HTMLActuator.prototype.message = function (won) {

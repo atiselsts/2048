@@ -1,14 +1,60 @@
-function GameManager(size, InputManager, Actuator, StorageManager) {
+SEARCH_DEPTH = 4;
+SEARCH_TIME = 3000;  // 3000 milliseconds
+
+// --------------------------
+
+function Timer (game, interval) {
+  this.game = game;
+  this.interval = interval;
+  this.timerID = undefined;
+  this.isStopped = true;
+}
+
+Timer.prototype.callback = function () {
+  var nextTime = Date.now() + this.interval;
+  if (this.isStopped || !this.game.moveAI()) {
+    this.stop();
+  } else {
+    var remaining = nextTime - Date.now();
+    if (remaining < 1) remaining = 1;
+    this.restart(remaining);
+  }
+};
+
+Timer.prototype.restart = function (adjustedInterval) {
+  var self = this;
+  self.timerID = setTimeout(function() { self.callback(); }, adjustedInterval);
+}
+
+Timer.prototype.start = function () {
+  this.isStopped = false;
+  if (this.timerID !== undefined) clearTimeout(this.timerID);
+  this.restart(1);
+};
+
+Timer.prototype.stop = function () {
+  this.isStopped = true;
+};
+
+// --------------------------
+
+function GameManager(size, InputManager, Actuator, StorageManager, AI) {
   this.size           = size; // Size of the grid
   this.inputManager   = new InputManager;
   this.storageManager = new StorageManager;
   this.actuator       = new Actuator;
+  this.ai             = new AI;
+  this.autoplayTimer  = new Timer(this, 200);
 
   this.startTiles     = 2;
+  this.isAutoplay     = false;
 
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+
+  this.inputManager.on("moveAI", this.moveAI.bind(this));
+  this.inputManager.on("autoplayAI", this.autoplayAI.bind(this));
 
   this.setup();
 }
@@ -23,7 +69,33 @@ GameManager.prototype.restart = function () {
 // Keep playing after winning (allows going over 2048)
 GameManager.prototype.keepPlaying = function () {
   this.keepPlaying = true;
+  this.autoplayTimer.start();
   this.actuator.continueGame(); // Clear the game won/lost message
+};
+
+GameManager.prototype.moveAI = function () {
+  if (this.isGameTerminated()) {
+    return false; // Don't do anything if the game's over
+  }
+
+  var mv = this.ai.getMoveDirection(this, SEARCH_DEPTH, SEARCH_TIME);
+
+  this.bestValue = mv.score.best + " / " + Math.floor(mv.score.avg) + " / " + mv.score.worst;
+  this.move(mv.direction);
+
+  return true;
+};
+
+GameManager.prototype.autoplayAI = function () {
+  if (this.isGameTerminated()) return; // Don't do anything if the game's over
+
+  this.isAutoplay = !this.isAutoplay;
+  if (this.isAutoplay) {
+    this.autoplayTimer.start();
+  } else {
+    this.autoplayTimer.stop();
+  }
+  this.actuate();
 };
 
 // Return true if the game is lost, or has won and the user hasn't kept playing
@@ -53,6 +125,11 @@ GameManager.prototype.setup = function () {
     // Add the initial tiles
     this.addStartTiles();
   }
+
+  this.currentValue = "n/a";
+  this.bestValue = "n/a";
+
+  this.autoplayTimer.stop();
 
   // Update the actuator
   this.actuate();
@@ -93,9 +170,11 @@ GameManager.prototype.actuate = function () {
     over:       this.over,
     won:        this.won,
     bestScore:  this.storageManager.getBestScore(),
-    terminated: this.isGameTerminated()
+    terminated: this.isGameTerminated(),
+    currentValue: this.currentValue,
+    bestValue:  this.bestValue,
+    autoplay:   this.isAutoplay,
   });
-
 };
 
 // Represent the current game as an object
@@ -135,8 +214,8 @@ GameManager.prototype.move = function (direction) {
 
   var cell, tile;
 
-  var vector     = this.getVector(direction);
-  var traversals = this.buildTraversals(vector);
+  var vector     = Grid.prototype.getVector(direction);
+  var traversals = Grid.prototype.buildTraversals(vector);
   var moved      = false;
 
   // Save the current tile positions and remove merger information
@@ -182,41 +261,14 @@ GameManager.prototype.move = function (direction) {
   if (moved) {
     this.addRandomTile();
 
+    this.currentValue = this.ai.estimatePosition(self);
+
     if (!this.movesAvailable()) {
       this.over = true; // Game over!
     }
 
     this.actuate();
   }
-};
-
-// Get the vector representing the chosen direction
-GameManager.prototype.getVector = function (direction) {
-  // Vectors representing tile movement
-  var map = {
-    0: { x: 0,  y: -1 }, // Up
-    1: { x: 1,  y: 0 },  // Right
-    2: { x: 0,  y: 1 },  // Down
-    3: { x: -1, y: 0 }   // Left
-  };
-
-  return map[direction];
-};
-
-// Build a list of positions to traverse in the right order
-GameManager.prototype.buildTraversals = function (vector) {
-  var traversals = { x: [], y: [] };
-
-  for (var pos = 0; pos < this.size; pos++) {
-    traversals.x.push(pos);
-    traversals.y.push(pos);
-  }
-
-  // Always traverse from the farthest cell in the chosen direction
-  if (vector.x === 1) traversals.x = traversals.x.reverse();
-  if (vector.y === 1) traversals.y = traversals.y.reverse();
-
-  return traversals;
 };
 
 GameManager.prototype.findFarthestPosition = function (cell, vector) {
@@ -251,7 +303,7 @@ GameManager.prototype.tileMatchesAvailable = function () {
 
       if (tile) {
         for (var direction = 0; direction < 4; direction++) {
-          var vector = self.getVector(direction);
+          var vector = Grid.prototype.getVector(direction);
           var cell   = { x: x + vector.x, y: y + vector.y };
 
           var other  = self.grid.cellContent(cell);

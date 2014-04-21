@@ -115,3 +115,36 @@ Grid.prototype.serialize = function () {
     cells: cellState
   };
 };
+
+// Get the vector representing the chosen direction
+Grid.prototype.getVector = function (direction) {
+  if (direction === 0) return { x: 0,  y: -1 }; // Up
+  if (direction === 1) return { x: 1,  y: 0 };  // Right
+  if (direction === 2) return { x: 0,  y: 1 };  // Down
+  if (direction === 3) return { x: -1,  y: 0 }; // Left
+};
+
+// Build a list of positions to traverse in the right order
+Grid.prototype.buildTraversals = function (vector) {
+  var traversals = { };
+  if (vector.x === 1) traversals.x = [3, 2, 1, 0];
+  else traversals.x = [0, 1, 2, 3];
+  if (vector.y === 1) traversals.y = [3, 2, 1, 0];
+  else traversals.y = [0, 1, 2, 3];
+  return traversals;    
+};
+
+Grid.prototype.getVectorAndTraversals = function (direction) {
+  if (direction === 0) {
+    return { x: 0,  y: -1, startX: 0, endX : 4, stepX : 1, startY : 0, endY : 4, stepY : 1}; // Up
+  }
+  if (direction === 1) {
+    return { x: 1,  y: 0, startX: 3, endX : -1, stepX : -1, startY : 0, endY : 4, stepY : 1}; // Right
+  }
+  if (direction === 2) {
+    return { x: 0,  y: 1, startX : 0, endX : 4, stepX : 1, startY : 3, endY : -1, stepY : -1}; // Down
+  }
+  if (direction === 3) {
+    return { x: -1,  y: 0, startX : 0, endX : 4, stepX : 1, startY : 0, endY : 4, stepY : 1}; // Left
+  }
+};
