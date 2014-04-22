@@ -35,6 +35,11 @@
       <a class="restart-button">New Game</a>
     </div>
 
+    <div class="above-game">
+      <a class="move-button">Auto move</a>
+      <a class="autoplay-button">Auto play</a>
+    </div>
+
     <div class="game-container">
       <div class="game-message">
         <p></p>
@@ -93,6 +98,13 @@
     </div>
 
     <p class="game-explanation">
+      The estimate value of the current position: <br/>
+      <span class="current-value-container">0</span><br/>
+      The best/average/worst estimate value in the best search tree branch:<br/>
+      <span class="best-value-container">0</span>
+    </p>
+
+    <p class="game-explanation">
       <strong class="important">How to play:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
     </p>
     <hr>
@@ -131,6 +143,7 @@
   <script src="js/html_actuator.js"></script>
   <script src="js/grid.js"></script>
   <script src="js/tile.js"></script>
+  <script src="js/ai.js"></script>
   <script src="js/local_storage_manager.js"></script>
   <script src="js/game_manager.js"></script>
   <script src="js/application.js"></script>
